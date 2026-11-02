@@ -1,0 +1,22 @@
+from django.db import connection
+from django.http import JsonResponse
+from django.urls import path
+
+
+def health(request):
+    """存活探针：数据库不可用时 503（供 compose healthcheck / 运维）。"""
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        db_ok = True
+    except Exception:  # noqa: BLE001 —— 探针要吞掉一切异常
+        db_ok = False
+    return JsonResponse(
+        {"status": "ok" if db_ok else "degraded", "db": db_ok},
+        status=200 if db_ok else 503,
+    )
+
+
+urlpatterns = [
+    path("api/health", health),
+]
