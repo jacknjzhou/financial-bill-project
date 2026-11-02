@@ -1,0 +1,75 @@
+from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.views.decorators.csrf import ensure_csrf_cookie
+from rest_framework import status
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+
+from apps.core.errors import ValidationError
+
+from .models import User  # noqa: F401
+from .serializers import ChangePasswordSerializer, LoginSerializer, UserOutSerializer
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+def login_view(request):
+    """账号密码登录（两种登录模式之一；SSO 见 T2B）。成功后建 Django 会话。"""
+    ser = LoginSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    user = authenticate(
+        request,
+        username=ser.validated_data["username"],
+        password=ser.validated_data["password"],
+    )
+    if user is None or not user.is_active:
+        # 统一文案，不泄漏账号是否存在 / 是否停用
+        raise ValidationError("用户名或密码错误", code="INVALID_CREDENTIALS")
+    login(request, user)
+    return Response(
+        {"user": UserOutSerializer(user).data, "must_change_password": user.must_change_password}
+    )
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def logout_view(request):
+    logout(request)
+    return Response({"ok": True})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def me_view(request):
+    return Response(UserOutSerializer(request.user).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def change_password_view(request):
+    """改密；未设密码（SSO 建号）免旧密码。成功后 must_change_password 转 False。"""
+    ser = ChangePasswordSerializer(data=request.data)
+    ser.is_valid(raise_exception=True)
+    user = request.user
+    old = ser.validated_data.get("old_password") or ""
+    new = ser.validated_data["new_password"]
+    if user.has_usable_password():
+        if not old or not user.check_password(old):
+            raise ValidationError("旧密码不正确", code="INVALID_CREDENTIALS")
+    if user.has_usable_password() and user.check_password(new):
+        raise ValidationError("新密码不能与旧密码相同")
+    user.set_password(new)
+    user.must_change_password = False
+    user.save(update_fields=["password", "must_change_password"])
+    # 关键：密码变更会使会话认证哈希失配（Django 会登出该会话），
+    # 轮换会话哈希保持当前会话有效——强制改密流程改完不能把用户踢回登录页
+    update_session_auth_hash(request, user)
+    return Response({"ok": True})
+
+
+@ensure_csrf_cookie
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def csrf_view(request):
+    """前端首个 POST 前调用，种 csrftoken cookie（axios 自动带 X-XSRFToken）。"""
+    return Response({"ok": True})

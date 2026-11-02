@@ -34,8 +34,9 @@ INSTALLED_APPS = [
     "rest_framework",
     "drf_spectacular",
     # 业务 app（apps/ 统一目录，后续任务逐个启用）：
-    # "apps.core", "apps.accounts", "apps.meta", "apps.rules",
-    # "apps.dataio", "apps.engine", "apps.disputes",
+    "apps.core",
+    "apps.accounts",
+    # "apps.meta", "apps.rules", "apps.dataio", "apps.engine", "apps.disputes",
 ]
 
 MIDDLEWARE = [
@@ -46,6 +47,8 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    # 强制改密闸门（必须排在 AuthenticationMiddleware 之后）
+    "apps.core.middleware.MustChangePasswordGate",
 ]
 
 ROOT_URLCONF = "financial_bill.urls"
@@ -67,6 +70,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "financial_bill.wsgi.application"
 ASGI_APPLICATION = "financial_bill.asgi.application"
+
+AUTH_USER_MODEL = "accounts.User"
 
 DATABASES = {
     "default": {
@@ -99,6 +104,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
     "PAGE_SIZE": 20,
     "DEFAULT_RENDERER_CLASSES": ["rest_framework.renderers.JSONRenderer"],
+    "EXCEPTION_HANDLER": "apps.core.errors.recon_exception_handler",
 }
 SPECTACULAR_SETTINGS = {
     "TITLE": "对账系统",
