@@ -13,3 +13,4 @@ dist/
 .worktrees
 frontend/test-results/
 backups/
+.workbuddy/
