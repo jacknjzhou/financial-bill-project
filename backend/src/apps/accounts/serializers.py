@@ -18,4 +18,14 @@ class LoginSerializer(serializers.Serializer):
 class ChangePasswordSerializer(serializers.Serializer):
     # 未设密码（SSO 自动建号用户）免旧密码
     old_password = serializers.CharField(required=False, allow_blank=True)
-    new_password = serializers.CharField(min_length=8, max_length=64)
+    new_password = serializers.CharField(min_length=8)
+
+
+class AuthConfigSerializer(serializers.Serializer):
+    """登录页配置（SSO 按钮显隐）。"""
+
+    sso_enabled = serializers.BooleanField()
+
+
+class OkSerializer(serializers.Serializer):
+    ok = serializers.BooleanField()

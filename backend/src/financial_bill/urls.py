@@ -2,6 +2,11 @@ from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
 
 
 def health(request):
@@ -21,6 +26,10 @@ def health(request):
 urlpatterns = [
     path("api/health", health),
     path("api/v1/auth/", include("apps.accounts.urls")),
+    # OpenAPI 在线文档（挂 /api 级，不进 /api/v1）：Swagger UI 可试调 / ReDoc 只读
+    path("api/schema", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
 ]
 
 # SSO 开启时才挂 allauth 模板流程（/accounts/{provider_id}/login/ 与回跳 callback）

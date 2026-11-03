@@ -3,18 +3,47 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.shortcuts import redirect
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from drf_spectacular.utils import (
+    OpenApiParameter,
+    OpenApiResponse,
+    extend_schema,
+    inline_serializer,
+)
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework import serializers
 
 from apps.core.errors import NotFoundError, ValidationError
 
 from .models import User  # noqa: F401
 from .oidc import PROVIDER, get_or_create_sso_app, sso_provider_id
-from .serializers import ChangePasswordSerializer, LoginSerializer, UserOutSerializer
+from .serializers import (
+    AuthConfigSerializer,
+    ChangePasswordSerializer,
+    LoginSerializer,
+    OkSerializer,
+    UserOutSerializer,
+)
+
+# 注意：@api_view 只拷贝 func 上的 schema 属性，extend_schema 必须放在
+# api_view 外层（drf-spectacular 对带 .cls 的 as_view() 产物有专门分支）。
+
+LoginRespSerializer = inline_serializer(
+    "LoginResp",
+    fields={
+        "user": UserOutSerializer(),
+        "must_change_password": serializers.BooleanField(),
+    },
+)
 
 
+@extend_schema(
+    request=LoginSerializer,
+    responses={200: LoginRespSerializer, 400: None},
+    summary="账号密码登录",
+)
 @api_view(["POST"])
 @permission_classes([AllowAny])
 def login_view(request):
@@ -35,6 +64,7 @@ def login_view(request):
     )
 
 
+@extend_schema(responses={200: OkSerializer}, summary="登出")
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def logout_view(request):
@@ -42,12 +72,18 @@ def logout_view(request):
     return Response({"ok": True})
 
 
+@extend_schema(responses={200: UserOutSerializer}, summary="当前登录用户")
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def me_view(request):
     return Response(UserOutSerializer(request.user).data)
 
 
+@extend_schema(
+    request=ChangePasswordSerializer,
+    responses={200: OkSerializer, 400: None},
+    summary="修改/设置本地密码（未设密码免旧密码）",
+)
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def change_password_view(request):
@@ -71,6 +107,7 @@ def change_password_view(request):
     return Response({"ok": True})
 
 
+@extend_schema(responses={200: OkSerializer}, summary="种 csrftoken cookie")
 @ensure_csrf_cookie
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -79,6 +116,7 @@ def csrf_view(request):
     return Response({"ok": True})
 
 
+@extend_schema(responses={200: AuthConfigSerializer}, summary="登录页配置（SSO 开关）")
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def auth_config_view(request):
@@ -86,6 +124,13 @@ def auth_config_view(request):
     return Response({"sso_enabled": bool(getattr(settings, "OIDC_ENABLED", False))})
 
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter(name="next", type=str, description="登录成功后回跳的前端路径", default="/")
+    ],
+    responses={302: OpenApiResponse(response=None), 404: OpenApiResponse(response=None)},
+    summary="SSO 登录桥（302 至 IdP）",
+)
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def oidc_login_view(request):
