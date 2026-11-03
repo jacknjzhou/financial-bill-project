@@ -11,19 +11,46 @@ const store = useAuthStore();
 
 const voluntaryOpen = ref(false);
 
-const menus = [
+const menus: Array<
+  | { path: string; title: string; adminOnly?: boolean }
+  | { title: string; children: Array<{ path: string; title: string; adminOnly?: boolean }> }
+> = [
   { path: "/", title: "工作台" },
   { path: "/projects", title: "对账项目" },
   { path: "/results", title: "对账结果" },
   { path: "/disputes", title: "差错处理" },
   { path: "/runs", title: "对账运行" },
-  { path: "/files", title: "文件管理" },
-  { path: "/channels", title: "渠道配置" },
-  { path: "/parse-rules", title: "解析规则" },
+  {
+    title: "数据管理",
+    children: [{ path: "/files", title: "文件管理" }],
+  },
+  {
+    title: "基础配置",
+    children: [
+      { path: "/channels", title: "渠道配置" },
+      { path: "/fund-accounts", title: "资金账户" },
+      { path: "/biz-types", title: "业务类型" },
+      { path: "/dispute-types", title: "差错处理类型" },
+      { path: "/parse-rules", title: "解析规则" },
+    ],
+  },
   { path: "/users", title: "系统管理", adminOnly: true },
 ];
 
-const visibleMenus = computed(() => menus.filter((m) => !m.adminOnly || store.isAdmin));
+const isGroup = (m: (typeof menus)[number]): m is { title: string; children: Array<{ path: string; title: string; adminOnly?: boolean }> } =>
+  "children" in m;
+
+const visibleMenus = computed(() =>
+  menus
+    .map((m) => {
+      if (isGroup(m)) {
+        const children = m.children.filter((c) => !c.adminOnly || store.isAdmin);
+        return { ...m, children };
+      }
+      return m;
+    })
+    .filter((m) => (isGroup(m) ? m.children.length > 0 : !m.adminOnly || store.isAdmin)),
+);
 
 function onCommand(cmd: string) {
   if (cmd === "changepwd") voluntaryOpen.value = true;
@@ -55,9 +82,13 @@ function onForcedCancel() {
         text-color="#a6adb4"
         active-text-color="#fff"
       >
-        <el-menu-item v-for="m in visibleMenus" :key="m.path" :index="m.path">
-          {{ m.title }}
-        </el-menu-item>
+        <template v-for="m in visibleMenus" :key="'title' in m && isGroup(m) ? m.title : m.path">
+          <el-sub-menu v-if="isGroup(m)" :index="m.title">
+            <template #title>{{ m.title }}</template>
+            <el-menu-item v-for="c in m.children" :key="c.path" :index="c.path">{{ c.title }}</el-menu-item>
+          </el-sub-menu>
+          <el-menu-item v-else :index="m.path">{{ m.title }}</el-menu-item>
+        </template>
       </el-menu>
     </el-aside>
     <el-container>

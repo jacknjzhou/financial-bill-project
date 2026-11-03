@@ -4,6 +4,10 @@ import Login from "../views/Login.vue";
 import SsoCallback from "../views/SsoCallback.vue";
 import Dashboard from "../views/Dashboard.vue";
 import ComingSoon from "../views/ComingSoon.vue";
+import Channels from "../views/meta/Channels.vue";
+import FundAccounts from "../views/meta/FundAccounts.vue";
+import BizTypes from "../views/meta/BizTypes.vue";
+import DisputeTypes from "../views/meta/DisputeTypes.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -25,7 +29,10 @@ const router = createRouter({
         { path: "disputes", name: "disputes", component: ComingSoon, meta: { title: "差错处理" } },
         { path: "runs", name: "runs", component: ComingSoon, meta: { title: "对账运行" } },
         { path: "files", name: "files", component: ComingSoon, meta: { title: "文件管理" } },
-        { path: "channels", name: "channels", component: ComingSoon, meta: { title: "渠道配置" } },
+        { path: "channels", name: "channels", component: Channels, meta: { title: "渠道配置" } },
+        { path: "fund-accounts", name: "fund-accounts", component: FundAccounts, meta: { title: "资金账户" } },
+        { path: "biz-types", name: "biz-types", component: BizTypes, meta: { title: "业务类型" } },
+        { path: "dispute-types", name: "dispute-types", component: DisputeTypes, meta: { title: "差错处理类型" } },
         { path: "parse-rules", name: "parse-rules", component: ComingSoon, meta: { title: "解析规则" } },
         { path: "users", name: "users", component: ComingSoon, meta: { title: "系统管理", adminOnly: true } },
       ],
