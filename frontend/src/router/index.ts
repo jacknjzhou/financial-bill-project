@@ -14,6 +14,8 @@ import Projects from "../views/rules/Projects.vue";
 import Files from "../views/dataio/Files.vue";
 import DataQuery from "../views/dataio/DataQuery.vue";
 import Runs from "../views/engine/Runs.vue";
+import Results from "../views/results/Results.vue";
+import Disputes from "../views/disputes/Disputes.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -31,8 +33,8 @@ const router = createRouter({
       children: [
         { path: "", name: "dashboard", component: Dashboard },
         { path: "projects", name: "projects", component: Projects, meta: { title: "对账项目" } },
-        { path: "results", name: "results", component: ComingSoon, meta: { title: "对账结果" } },
-        { path: "disputes", name: "disputes", component: ComingSoon, meta: { title: "差错处理" } },
+        { path: "results", name: "results", component: Results, meta: { title: "对账结果" } },
+        { path: "disputes", name: "disputes", component: Disputes, meta: { title: "差错处理" } },
         { path: "runs", name: "runs", component: Runs, meta: { title: "对账运行" } },
         { path: "files", name: "files", component: Files, meta: { title: "文件管理" } },
         { path: "data-query", name: "data-query", component: DataQuery, meta: { title: "数据查询" } },
