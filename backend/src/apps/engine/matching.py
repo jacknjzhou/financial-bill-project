@@ -7,13 +7,20 @@
 from __future__ import annotations
 
 import logging
-from uuid import uuid4
+from uuid import UUID, uuid5
 
 from django.db import connection
 
 logger = logging.getLogger(__name__)
 
 BULK_BATCH = 1000
+
+# 确定性 group_no 命名空间：重对后同源行得到同一 group_no（差错幂等键依赖此性质）
+GNO_NAMESPACE = UUID("6f1d2c34-7b5a-4e92-9c3d-1a2b3c4d5e6f")
+
+
+def _gno(project, key: str, kind: str, ident) -> UUID:
+    return uuid5(GNO_NAMESPACE, f"{getattr(project, 'pk', '')}|{key}|{kind}|{ident}")
 
 # 取数字段映射（标准字段 → 模型字段）
 FIELD_MAP = {"biz_type": "biz_type__code"}
@@ -37,7 +44,7 @@ def match(a_rows: list[dict], b_rows: list[dict], project) -> list[dict]:
         k = _kv(a, key_field)
         group = index.get(k)
         if not group:
-            out.append(_single("one_a", a=a, key=k))
+            out.append(_single("one_a", a=a, key=k, group_no=_gno(project, k, "A", a["id"])))
             continue
         del index[k]  # 整组消费：命中即从索引删除（同键下一条 A 只能落 one_a 或配下一组）
         out.extend(_compare(a, group, a_set, b_set, k, project))
@@ -46,12 +53,12 @@ def match(a_rows: list[dict], b_rows: list[dict], project) -> list[dict]:
     # 剩余未匹配 B
     for k, group in index.items():
         if project.b_sum and len(group) > 1:
-            gid = uuid4()
+            gid = _gno(project, k, "BG", k)  # 聚合组以键为身份（重对稳定）
             for b in group:
                 out.append(_single("one_b", b=b, key=k, group_no=gid))
         else:
             for b in group:
-                out.append(_single("one_b", b=b, key=k))
+                out.append(_single("one_b", b=b, key=k, group_no=_gno(project, k, "B", b["id"])))
     return out
 
 
@@ -68,7 +75,7 @@ def _single(status: str, a=None, b=None, key: str = "", group_no=None) -> dict:
         "diff_amount": 0,
         "diff_type": "none",
         "biz_type": (a or b or {}).get("biz_type"),
-        "group_no": group_no or uuid4(),
+        "group_no": group_no,  # 由调用方按确定性规则传入（重对幂等）
     }
 
 
@@ -83,7 +90,7 @@ def _compare(a: dict, b_group: list[dict], a_set: set, b_set: set, k: str, proje
     )
     amount_ok = total == a["amount"]
 
-    gid = uuid4()
+    gid = _gno(project, k, "A", a["id"])  # A 行是组身份：重对后稳定
     results: list[dict] = []
 
     if status_ok and amount_ok:

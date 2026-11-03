@@ -48,7 +48,7 @@ INSTALLED_APPS = [
     "apps.rules",
     "apps.dataio",
     "apps.engine",
-    # "apps.disputes",
+    "apps.disputes",
 ]
 
 MIDDLEWARE = [
