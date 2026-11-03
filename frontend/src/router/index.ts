@@ -8,6 +8,9 @@ import Channels from "../views/meta/Channels.vue";
 import FundAccounts from "../views/meta/FundAccounts.vue";
 import BizTypes from "../views/meta/BizTypes.vue";
 import DisputeTypes from "../views/meta/DisputeTypes.vue";
+import ParseRules from "../views/rules/ParseRules.vue";
+import FetchTasks from "../views/rules/FetchTasks.vue";
+import Projects from "../views/rules/Projects.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -24,7 +27,7 @@ const router = createRouter({
       component: MainLayout,
       children: [
         { path: "", name: "dashboard", component: Dashboard },
-        { path: "projects", name: "projects", component: ComingSoon, meta: { title: "对账项目" } },
+        { path: "projects", name: "projects", component: Projects, meta: { title: "对账项目" } },
         { path: "results", name: "results", component: ComingSoon, meta: { title: "对账结果" } },
         { path: "disputes", name: "disputes", component: ComingSoon, meta: { title: "差错处理" } },
         { path: "runs", name: "runs", component: ComingSoon, meta: { title: "对账运行" } },
@@ -33,7 +36,8 @@ const router = createRouter({
         { path: "fund-accounts", name: "fund-accounts", component: FundAccounts, meta: { title: "资金账户" } },
         { path: "biz-types", name: "biz-types", component: BizTypes, meta: { title: "业务类型" } },
         { path: "dispute-types", name: "dispute-types", component: DisputeTypes, meta: { title: "差错处理类型" } },
-        { path: "parse-rules", name: "parse-rules", component: ComingSoon, meta: { title: "解析规则" } },
+        { path: "parse-rules", name: "parse-rules", component: ParseRules, meta: { title: "解析规则" } },
+        { path: "fetch-tasks", name: "fetch-tasks", component: FetchTasks, meta: { title: "获取任务" } },
         { path: "users", name: "users", component: ComingSoon, meta: { title: "系统管理", adminOnly: true } },
       ],
     },

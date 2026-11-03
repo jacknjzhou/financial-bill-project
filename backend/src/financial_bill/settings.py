@@ -45,7 +45,8 @@ INSTALLED_APPS = [
     "apps.core",
     "apps.accounts",
     "apps.meta",
-    # "apps.rules", "apps.dataio", "apps.engine", "apps.disputes",
+    "apps.rules",
+    # "apps.dataio", "apps.engine", "apps.disputes",
 ]
 
 MIDDLEWARE = [

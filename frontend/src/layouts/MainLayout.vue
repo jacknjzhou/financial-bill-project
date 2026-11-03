@@ -25,13 +25,19 @@ const menus: Array<
     children: [{ path: "/files", title: "文件管理" }],
   },
   {
+    title: "对账配置",
+    children: [
+      { path: "/parse-rules", title: "解析规则" },
+      { path: "/fetch-tasks", title: "获取任务" },
+    ],
+  },
+  {
     title: "基础配置",
     children: [
       { path: "/channels", title: "渠道配置" },
       { path: "/fund-accounts", title: "资金账户" },
       { path: "/biz-types", title: "业务类型" },
       { path: "/dispute-types", title: "差错处理类型" },
-      { path: "/parse-rules", title: "解析规则" },
     ],
   },
   { path: "/users", title: "系统管理", adminOnly: true },
