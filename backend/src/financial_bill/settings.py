@@ -47,7 +47,8 @@ INSTALLED_APPS = [
     "apps.meta",
     "apps.rules",
     "apps.dataio",
-    # "apps.engine", "apps.disputes",
+    "apps.engine",
+    # "apps.disputes",
 ]
 
 MIDDLEWARE = [
@@ -111,6 +112,16 @@ CELERY_TASK_EAGER_PROPAGATES = True
 CELERY_TIMEZONE = "Asia/Shanghai"
 CELERY_TASK_TIME_LIMIT = 1800  # 30min 硬杀
 CELERY_TASK_SOFT_TIME_LIMIT = 1500
+
+# beat：每 30 分钟扫描到期项目（exec_time ≤ now 且昨日未对）
+from celery.schedules import crontab  # noqa: E402
+
+CELERY_BEAT_SCHEDULE = {
+    "scan-due-runs": {
+        "task": "apps.engine.tasks.scan_due_runs",
+        "schedule": crontab(minute="0,30"),
+    },
+}
 
 # DRF / OpenAPI
 REST_FRAMEWORK = {

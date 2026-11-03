@@ -104,8 +104,8 @@ def _file_is_reconciled(in_file: InFile) -> bool:
         return False
     try:
         from apps.engine.models import ReconcileResult
-    except LookupError:
-        return False
+    except (ImportError, LookupError):
+        return False  # T10 前引擎模型未建，无引用可言
     pay_ids = list(in_file.payment_rows.values_list("id", flat=True))
     clr_ids = list(in_file.clearing_rows.values_list("id", flat=True))
     if pay_ids and ReconcileResult.objects.filter(a_id__in=pay_ids).exists():

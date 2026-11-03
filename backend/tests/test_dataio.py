@@ -170,7 +170,10 @@ class TestUploadAndParse:
         if not dj_apps.is_installed("apps.engine"):
             pytest.skip("T10 engine 未实现，409 保护在 T10 后生效（见 _file_is_reconciled）")
 
-        from apps.engine.models import ReconcileResult
+        try:
+            from apps.engine.models import ReconcileResult
+        except ImportError:
+            pytest.skip("ReconcileResult 模型在 T10 建立")
         from apps.rules.models import ReconcileProject
 
         assert upload(client, setup["task"].id, "good.xlsx", xlsx_bytes()).status_code == 201

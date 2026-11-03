@@ -13,6 +13,7 @@ import FetchTasks from "../views/rules/FetchTasks.vue";
 import Projects from "../views/rules/Projects.vue";
 import Files from "../views/dataio/Files.vue";
 import DataQuery from "../views/dataio/DataQuery.vue";
+import Runs from "../views/engine/Runs.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -32,7 +33,7 @@ const router = createRouter({
         { path: "projects", name: "projects", component: Projects, meta: { title: "对账项目" } },
         { path: "results", name: "results", component: ComingSoon, meta: { title: "对账结果" } },
         { path: "disputes", name: "disputes", component: ComingSoon, meta: { title: "差错处理" } },
-        { path: "runs", name: "runs", component: ComingSoon, meta: { title: "对账运行" } },
+        { path: "runs", name: "runs", component: Runs, meta: { title: "对账运行" } },
         { path: "files", name: "files", component: Files, meta: { title: "文件管理" } },
         { path: "data-query", name: "data-query", component: DataQuery, meta: { title: "数据查询" } },
         { path: "channels", name: "channels", component: Channels, meta: { title: "渠道配置" } },
