@@ -22,7 +22,10 @@ const menus: Array<
   { path: "/runs", title: "对账运行" },
   {
     title: "数据管理",
-    children: [{ path: "/files", title: "文件管理" }],
+    children: [
+      { path: "/files", title: "文件管理" },
+      { path: "/data-query", title: "数据查询" },
+    ],
   },
   {
     title: "对账配置",

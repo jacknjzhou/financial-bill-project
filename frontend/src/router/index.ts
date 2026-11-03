@@ -11,6 +11,8 @@ import DisputeTypes from "../views/meta/DisputeTypes.vue";
 import ParseRules from "../views/rules/ParseRules.vue";
 import FetchTasks from "../views/rules/FetchTasks.vue";
 import Projects from "../views/rules/Projects.vue";
+import Files from "../views/dataio/Files.vue";
+import DataQuery from "../views/dataio/DataQuery.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -31,7 +33,8 @@ const router = createRouter({
         { path: "results", name: "results", component: ComingSoon, meta: { title: "对账结果" } },
         { path: "disputes", name: "disputes", component: ComingSoon, meta: { title: "差错处理" } },
         { path: "runs", name: "runs", component: ComingSoon, meta: { title: "对账运行" } },
-        { path: "files", name: "files", component: ComingSoon, meta: { title: "文件管理" } },
+        { path: "files", name: "files", component: Files, meta: { title: "文件管理" } },
+        { path: "data-query", name: "data-query", component: DataQuery, meta: { title: "数据查询" } },
         { path: "channels", name: "channels", component: Channels, meta: { title: "渠道配置" } },
         { path: "fund-accounts", name: "fund-accounts", component: FundAccounts, meta: { title: "资金账户" } },
         { path: "biz-types", name: "biz-types", component: BizTypes, meta: { title: "业务类型" } },

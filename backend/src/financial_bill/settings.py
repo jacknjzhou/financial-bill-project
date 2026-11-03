@@ -46,7 +46,8 @@ INSTALLED_APPS = [
     "apps.accounts",
     "apps.meta",
     "apps.rules",
-    # "apps.dataio", "apps.engine", "apps.disputes",
+    "apps.dataio",
+    # "apps.engine", "apps.disputes",
 ]
 
 MIDDLEWARE = [
@@ -137,6 +138,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR.parent / "staticfiles"
+
+# 上传账单文件存储根（容器内挂卷 /data/files）
+FILES_ROOT = env("FILES_ROOT", str(BASE_DIR.parent.parent / "data" / "files"))
 
 # 邮件（站内 + 邮件告警；默认 console 后端便于开发）
 EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
