@@ -8,5 +8,7 @@ urlpatterns = [
     path("me", views.me_view),
     path("change-password", views.change_password_view),
     path("csrf", views.csrf_view),
-    # T2B：config / oidc/login / oidc/callback
+    path("config", views.auth_config_view),
+    path("oidc/login", views.oidc_login_view),
+    # OIDC 回跳由 allauth 接管：/accounts/{provider_id}/login/callback/（挂载见 financial_bill.urls）
 ]

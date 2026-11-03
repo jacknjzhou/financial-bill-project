@@ -3,6 +3,7 @@ import { onMounted, reactive, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import { ensureCsrf } from "../api/client";
+import { authApi } from "../api/auth";
 import { useAuthStore } from "../stores/auth";
 import MustChangeDialog from "../components/MustChangeDialog.vue";
 
@@ -12,10 +13,20 @@ const store = useAuthStore();
 
 const form = reactive({ username: "", password: "" });
 const loading = ref(false);
+const ssoEnabled = ref(false);
 
 onMounted(() => {
   // 种 csrftoken cookie（会话 POST 需要）
   void ensureCsrf();
+  // SSO 开关（env 驱动，默认关）→ 决定是否渲染「SSO 登录」按钮
+  authApi
+    .config()
+    .then((c) => {
+      ssoEnabled.value = c.sso_enabled;
+    })
+    .catch(() => {
+      /* 配置拉取失败按关闭处理 */
+    });
 });
 
 async function submit() {
@@ -32,6 +43,11 @@ async function submit() {
   } finally {
     loading.value = false;
   }
+}
+
+function ssoLogin() {
+  // 302 → allauth /accounts/{provider}/login/ → 企业 IdP；回跳后进 /sso/callback
+  window.location.href = "/api/v1/auth/oidc/login?next=/sso/callback";
 }
 </script>
 
@@ -59,6 +75,9 @@ async function submit() {
           <el-button type="primary" size="large" :loading="loading" native-type="submit" class="login-btn">
             登 录
           </el-button>
+        </el-form-item>
+        <el-form-item v-if="ssoEnabled">
+          <el-button size="large" class="login-btn" @click="ssoLogin()">SSO 登录</el-button>
         </el-form-item>
       </el-form>
     </el-card>

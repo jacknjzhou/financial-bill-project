@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import Login from "../views/Login.vue";
+import SsoCallback from "../views/SsoCallback.vue";
 import Dashboard from "../views/Dashboard.vue";
 import ComingSoon from "../views/ComingSoon.vue";
 import MainLayout from "../layouts/MainLayout.vue";
@@ -13,6 +14,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/login", name: "login", component: Login, meta: { public: true } },
+    { path: "/sso/callback", name: "sso-callback", component: SsoCallback, meta: { public: true } },
     {
       path: "/",
       component: MainLayout,

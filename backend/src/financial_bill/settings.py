@@ -11,8 +11,11 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # src/
 
-# 本地开发可放 backend/.env（gitignore）；容器内由 compose 注入，.env 不存在则忽略
-load_dotenv(BASE_DIR.parent / ".env")
+# .env 优先取项目根（compose 约定位置），兼容 backend/.env；容器内由 compose 注入
+for _env_file in (BASE_DIR.parent.parent / ".env", BASE_DIR.parent / ".env"):
+    if _env_file.exists():
+        load_dotenv(_env_file)  # 默认不覆盖已存在的环境变量
+        break
 
 
 def env(key: str, default: str = "") -> str:
@@ -33,6 +36,11 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
     "drf_spectacular",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    # allauth 65：provider 注册依赖 app 扫描，openid_connect 客户端必须登记
+    "allauth.socialaccount.providers.openid_connect",
     # 业务 app（apps/ 统一目录，后续任务逐个启用）：
     "apps.core",
     "apps.accounts",
@@ -45,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     # 强制改密闸门（必须排在 AuthenticationMiddleware 之后）
@@ -72,6 +81,12 @@ WSGI_APPLICATION = "financial_bill.wsgi.application"
 ASGI_APPLICATION = "financial_bill.asgi.application"
 
 AUTH_USER_MODEL = "accounts.User"
+
+# allauth / SSO（本地账号密码与 SSO 并存；开关 OIDC_ENABLED）
+SOCIALACCOUNT_ADAPTER = "apps.accounts.oidc.ReconSocialAccountAdapter"
+SOCIALACCOUNT_OPENID_CONNECT_URL_PREFIX = ""  # URL 为 /accounts/{provider_id}/login/（而非默认的 /accounts/oidc/{provider_id}/…）
+SOCIALACCOUNT_LOGIN_ON_GET = True  # SSO 按钮直达 IdP（免中间确认页；内部系统 IdP 可信）
+ACCOUNT_EMAIL_VERIFICATION = "none"  # 内部系统不强制邮箱验证
 
 DATABASES = {
     "default": {
@@ -137,3 +152,4 @@ OIDC_ISSUER = env("OIDC_ISSUER")
 OIDC_CLIENT_ID = env("OIDC_CLIENT_ID")
 OIDC_CLIENT_SECRET = env("OIDC_CLIENT_SECRET")
 OIDC_ROLE_MAP = env("OIDC_ROLE_MAP", "{}")  # JSON：IdP claim → 角色
+OIDC_PROVIDER_ID = env("OIDC_PROVIDER_ID", "oidc")  # /accounts/{provider_id}/… 路径段

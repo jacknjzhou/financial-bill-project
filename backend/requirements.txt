@@ -19,3 +19,9 @@ python-dotenv>=1.0
 # 测试
 pytest>=8
 pytest-django>=4.8
+
+# SSO / OIDC（allauth openid_connect 客户端验证 id_token 需要）
+cryptography>=42
+requests>=2.32
+
+PyJWT>=2.8

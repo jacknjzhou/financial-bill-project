@@ -1,13 +1,17 @@
+from django.conf import settings
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
+from django.shortcuts import redirect
+from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
-from apps.core.errors import ValidationError
+from apps.core.errors import NotFoundError, ValidationError
 
 from .models import User  # noqa: F401
+from .oidc import PROVIDER, get_or_create_sso_app, sso_provider_id
 from .serializers import ChangePasswordSerializer, LoginSerializer, UserOutSerializer
 
 
@@ -71,5 +75,26 @@ def change_password_view(request):
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def csrf_view(request):
-    """前端首个 POST 前调用，种 csrftoken cookie（axios 自动带 X-XSRFToken）。"""
+    """前端首个 POST 前调用，种 csrftoken cookie。"""
     return Response({"ok": True})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def auth_config_view(request):
+    """登录页配置：是否展示 SSO 按钮。"""
+    return Response({"sso_enabled": bool(getattr(settings, "OIDC_ENABLED", False))})
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def oidc_login_view(request):
+    """SSO 登录桥：302 至 allauth 的 OIDC 登录 URL（随后 302 至企业 IdP）。"""
+    if not getattr(settings, "OIDC_ENABLED", False):
+        raise NotFoundError("SSO 未启用")
+    get_or_create_sso_app()
+    from urllib.parse import urlencode
+
+    next_url = request.query_params.get("next") or "/"
+    url = reverse(f"{PROVIDER}_login", kwargs={"provider_id": sso_provider_id()})
+    return redirect(f"{url}?{urlencode({'process': 'login', 'next': next_url})}")

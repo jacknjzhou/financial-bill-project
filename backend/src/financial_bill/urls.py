@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import connection
 from django.http import JsonResponse
 from django.urls import include, path
@@ -21,3 +22,7 @@ urlpatterns = [
     path("api/health", health),
     path("api/v1/auth/", include("apps.accounts.urls")),
 ]
+
+# SSO 开启时才挂 allauth 模板流程（/accounts/{provider_id}/login/ 与回跳 callback）
+if settings.OIDC_ENABLED:
+    urlpatterns.append(path("accounts/", include("allauth.urls")))

@@ -6,6 +6,7 @@ export const authApi = {
     http.post<LoginResp>("/auth/login", { username, password }),
   logout: () => http.post("/auth/logout"),
   me: () => http.get<UserInfo>("/auth/me"),
+  config: () => http.get<{ sso_enabled: boolean }>("/auth/config"),
   changePassword: (oldPassword: string | null, newPassword: string) =>
     http.post("/auth/change-password", {
       ...(oldPassword ? { old_password: oldPassword } : {}),
