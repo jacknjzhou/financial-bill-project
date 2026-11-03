@@ -16,6 +16,7 @@ import DataQuery from "../views/dataio/DataQuery.vue";
 import Runs from "../views/engine/Runs.vue";
 import Results from "../views/results/Results.vue";
 import Disputes from "../views/disputes/Disputes.vue";
+import Users from "../views/admin/Users.vue";
 import MainLayout from "../layouts/MainLayout.vue";
 
 /**
@@ -44,7 +45,7 @@ const router = createRouter({
         { path: "dispute-types", name: "dispute-types", component: DisputeTypes, meta: { title: "差错处理类型" } },
         { path: "parse-rules", name: "parse-rules", component: ParseRules, meta: { title: "解析规则" } },
         { path: "fetch-tasks", name: "fetch-tasks", component: FetchTasks, meta: { title: "获取任务" } },
-        { path: "users", name: "users", component: ComingSoon, meta: { title: "系统管理", adminOnly: true } },
+        { path: "users", name: "users", component: Users, meta: { title: "系统管理", adminOnly: true } },
       ],
     },
     { path: "/:pathMatch(.*)*", redirect: "/" },

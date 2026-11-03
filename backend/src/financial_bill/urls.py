@@ -26,6 +26,7 @@ def health(request):
 urlpatterns = [
     path("api/health", health),
     path("api/v1/auth/", include("apps.accounts.urls")),
+    path("api/v1/", include("apps.accounts.users_urls")),
     path("api/v1/", include("apps.meta.urls")),
     path("api/v1/", include("apps.rules.urls")),
     path("api/v1/", include("apps.dataio.urls")),
