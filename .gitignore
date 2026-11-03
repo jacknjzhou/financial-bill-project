@@ -11,3 +11,4 @@ dist/
 
 # git worktrees（superpowers 工作流隔离工作区）
 .worktrees
+frontend/test-results/

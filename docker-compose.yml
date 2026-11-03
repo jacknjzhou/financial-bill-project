@@ -1,0 +1,96 @@
+name: financial-bill
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${DB_NAME:-recon}
+      POSTGRES_USER: ${DB_USER:-recon}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-recon}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432" # 本机开发/调试（本地 venv 跑 pytest、dbshell）
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-recon} -d ${DB_NAME:-recon}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379" # 本机开发/调试
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  web:
+    build: ./backend
+    env_file: .env
+    environment:
+      DB_HOST: postgres # 容器内覆盖 .env 的 localhost
+      REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files # web/worker/beat 共享，worker 才能读到上传文件
+    volumes:
+      - filedata:/data
+    ports:
+      - "8000:8000" # 仅 internal 网络 + frontend 反代；本机调试可直连
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/api/health',timeout=3).status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files
+    volumes:
+      - filedata:/data
+    command: celery -A financial_bill worker -c 2 --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      web:
+        condition: service_healthy
+
+  beat:
+    build: ./backend
+    env_file: .env
+    environment:
+      DB_HOST: postgres
+      REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files
+    volumes:
+      - filedata:/data
+    command: celery -A financial_bill beat --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - web
+
+volumes:
+  pgdata:
+  filedata:
