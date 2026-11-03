@@ -171,7 +171,7 @@ class TestUploadAndParse:
             pytest.skip("T10 engine 未实现，409 保护在 T10 后生效（见 _file_is_reconciled）")
 
         try:
-            from apps.engine.models import ReconcileResult
+            from apps.engine.models import ReconcileResult, ReconcileRun
         except ImportError:
             pytest.skip("ReconcileResult 模型在 T10 建立")
         from apps.rules.models import ReconcileProject
@@ -181,8 +181,11 @@ class TestUploadAndParse:
             name="P1", type="transaction", a_source="payment", b_source="clearing",
             match_key="order_no", start_date="2026-10-01",
         )
+        run = ReconcileRun.objects.create(
+            project=project, reconcile_date="2026-10-31", trigger=ReconcileRun.Trigger.MANUAL
+        )
         ReconcileResult.objects.create(
-            project=project, reconcile_date="2026-10-31", status="match",
+            run=run, project=project, reconcile_date="2026-10-31", status="match",
             a=PaymentData.objects.first(), match_key="1001",
         )
 

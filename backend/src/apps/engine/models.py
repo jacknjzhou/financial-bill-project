@@ -1,4 +1,6 @@
-"""对账引擎模型：Run 生命周期 + Alert（告警模型在 T9 建立供 alerts.py 引用）。"""
+"""对账引擎模型：Run 生命周期 + 结果存储 + Alert（告警模型在 T9 建立供 alerts.py 引用）。"""
+import uuid
+
 from django.db import models
 
 from apps.meta.models import BaseModel
@@ -40,6 +42,51 @@ class ReconcileRun(BaseModel):
 
     def __str__(self) -> str:
         return f"{self.project_id}@{self.reconcile_date}({self.status})"
+
+
+class ReconcileResult(BaseModel):
+    """对账结果（独立存储：重对可整批重建，源数据永不改动）。
+
+    group_no：同一匹配组共享——单行结果各自一个；1vN 汇总/多行错账时
+    A 行与 B 组各行同 group_no（详情页与差错处理按组聚合取回整组）。
+    """
+
+    class Status(models.TextChoices):
+        MATCH = "match", "对平"
+        ONE_A = "one_a", "单边A"
+        ONE_B = "one_b", "单边B"
+        WRONG = "wrong", "错账"
+
+    class DiffType(models.TextChoices):
+        NONE = "none", "无"
+        AMOUNT = "amount", "金额差"
+        STATUS = "status", "状态不符"
+        BOTH = "both", "金额+状态"
+
+    run = models.ForeignKey(ReconcileRun, on_delete=models.PROTECT, related_name="results")
+    project = models.ForeignKey("rules.ReconcileProject", on_delete=models.PROTECT, related_name="results")
+    reconcile_date = models.DateField("对账日期", db_index=True)
+    status = models.CharField("结果", max_length=8, choices=Status.choices)
+    a = models.ForeignKey("dataio.PaymentData", on_delete=models.PROTECT, null=True, blank=True, related_name="results_as_a")
+    b = models.ForeignKey("dataio.ClearingData", on_delete=models.PROTECT, null=True, blank=True, related_name="results_as_b")
+    match_key = models.CharField("匹配键值", max_length=128, blank=True, default="")
+    diff_amount = models.BigIntegerField("差异金额（分，b-a）", default=0)
+    diff_type = models.CharField("差异类型", max_length=8, choices=DiffType.choices, default=DiffType.NONE)
+    group_no = models.UUIDField("匹配组号", default=uuid.uuid4, db_index=True)
+    biz_type = models.ForeignKey("meta.BizType", on_delete=models.PROTECT, null=True, blank=True, related_name="results")
+
+    class Meta:
+        ordering = ["id"]
+        indexes = [models.Index(fields=["project", "reconcile_date", "status"])]
+        constraints = [
+            # 同项目内每条源数据最多出现在一个结果中（重对先删旧再写，同事务）
+            models.UniqueConstraint(
+                fields=["project", "a"], condition=models.Q(a__isnull=False), name="uniq_result_project_a"
+            ),
+            models.UniqueConstraint(
+                fields=["project", "b"], condition=models.Q(b__isnull=False), name="uniq_result_project_b"
+            ),
+        ]
 
 
 class Alert(BaseModel):

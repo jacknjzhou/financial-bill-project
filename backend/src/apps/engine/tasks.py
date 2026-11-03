@@ -14,9 +14,7 @@ logger = logging.getLogger(__name__)
 
 @shared_task
 def run_reconcile(run_id: int) -> str:
-    """执行一次对账：抢占 → 取数匹配（T10 填实）→ 计数落库。"""
-    from apps.engine.results import write_results  # T10 提供
-
+    """执行一次对账：抢占 → 取数匹配 → 写库 → 计数落库。"""
     run = ReconcileRun.objects.select_related("project").get(pk=run_id)
     if not control.claim_run(run):
         return "skipped"  # 已被抢占/非 PENDING：幂等 no-op
@@ -42,7 +40,21 @@ def run_reconcile(run_id: int) -> str:
     for field, value in summary.items():
         setattr(run, field, value)
     run.save(update_fields=["status", "finished_at", *summary.keys(), "updated_at"])
+
+    _materialize_disputes(run)
     return "success"
+
+
+def _materialize_disputes(run) -> None:
+    """T12 物化钩子（disputes 未启用时 no-op）。"""
+    try:
+        from apps.disputes.services import materialize
+    except ImportError:
+        return
+    try:
+        materialize(run.project, run.reconcile_date)
+    except Exception:  # noqa: BLE001 —— 差异物化失败不回滚对账结果
+        logger.exception("materialize disputes failed: run#%s", run.id)
 
 
 @shared_task

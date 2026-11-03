@@ -5,6 +5,7 @@ from . import views
 
 router = DefaultRouter(trailing_slash="")
 router.register("runs", views.RunViewSet, basename="run")
+router.register("reconcile-results", views.ResultViewSet, basename="reconcile-result")
 
 urlpatterns = [
     path("reconcile-projects/<int:project_id>/runs", views.trigger_run_view),

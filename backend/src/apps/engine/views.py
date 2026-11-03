@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from django.db import transaction
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, inline_serializer
 from rest_framework import serializers, viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from apps.core.errors import BusinessRuleError, NotFoundError
 from apps.core.permissions import IsAdminOrOperator
 from apps.engine import control
-from apps.engine.models import ReconcileRun
+from apps.engine.models import ReconcileResult, ReconcileRun
 
 
 class RunSerializer(serializers.ModelSerializer):
@@ -93,3 +93,104 @@ def _delay_run(run_id: int) -> None:
     from apps.engine.tasks import run_reconcile
 
     run_reconcile.delay(run_id)
+
+
+# ---------- 对账结果查询 ----------
+
+class ResultSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True)
+    diff_amount_yuan = serializers.SerializerMethodField()
+    order_no = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReconcileResult
+        fields = [
+            "id", "run", "project", "project_name", "reconcile_date", "status",
+            "a", "b", "order_no", "match_key", "diff_amount", "diff_amount_yuan",
+            "diff_type", "group_no", "biz_type", "created_at",
+        ]
+
+    def get_diff_amount_yuan(self, obj) -> str:
+        return f"{obj.diff_amount / 100:.2f}"
+
+    def get_order_no(self, obj) -> str:
+        if obj.a_id:
+            return obj.a.order_no
+        if obj.b_id:
+            return obj.b.order_no or obj.b.channel_order_no
+        return obj.match_key
+
+
+class ResultViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ReconcileResult.objects.select_related("a", "b", "project", "biz_type").all()
+    serializer_class = ResultSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        p = self.request.query_params
+        if v := p.get("project"):
+            qs = qs.filter(project_id=v)
+        if v := p.get("date"):
+            qs = qs.filter(reconcile_date=v)
+        if v := p.get("reconcile_date"):
+            qs = qs.filter(reconcile_date=v)
+        if v := p.get("status"):
+            qs = qs.filter(status=v)
+        return qs
+
+    @extend_schema(responses={200: ResultSerializer(many=True)}, summary="对账结果列表（分页）")
+    def list(self, request, *args, **kwargs):
+        return super().list(request, *args, **kwargs)
+
+    @extend_schema(
+        responses={
+            200: inline_serializer(
+                "ResultDetail",
+                fields={
+                    "result": ResultSerializer(),
+                    "a_row": serializers.JSONField(required=False, allow_null=True, help_text="A 方源数据全字段"),
+                    "b_rows": serializers.ListField(
+                        child=serializers.JSONField(), required=False, help_text="同组 B 方源数据全字段（可追溯）"
+                    ),
+                },
+            )
+        },
+        summary="结果详情：A 原文 + 同组全部 B 原文（可追溯性）",
+    )
+    def retrieve(self, request, *args, **kwargs):
+        result = self.get_object()
+        a_row = None
+        if result.a_id:
+            a_row = _model_full(result.a)
+        b_rows = []
+        if result.b_id:
+            siblings = type(result).objects.filter(group_no=result.group_no, b__isnull=False).select_related("b")
+            b_rows = [_model_full(r.b) for r in siblings]
+        elif result.a_id:
+            # A 侧组（1vN）：同组 B 行取回
+            siblings = type(result).objects.filter(group_no=result.group_no, b__isnull=False).select_related("b")
+            b_rows = [_model_full(r.b) for r in siblings]
+        ser = ResultSerializer(result)
+        return Response({"result": ser.data, "a_row": a_row, "b_rows": b_rows})
+
+
+def _model_full(obj) -> dict:
+    """源数据全字段（可追溯）：字段名 → 值；金额附 _yuan 展示。"""
+    from django.forms.models import model_to_dict
+
+    data = {"id": obj.pk}
+    for field in obj._meta.concrete_fields:
+        if field.attname in ("storage_path",):
+            continue  # 不暴露存储路径
+        value = getattr(obj, field.name)
+        if hasattr(value, "isoformat"):
+            value = value.isoformat()
+        elif hasattr(value, "pk"):
+            value = value.pk
+        data[field.name] = value
+        if field.name == "amount" and value is not None:
+            data["amount_yuan"] = f"{value / 100:.2f}"
+    # model_to_dict 仅为兼容保留引用
+    _ = model_to_dict
+    return data
