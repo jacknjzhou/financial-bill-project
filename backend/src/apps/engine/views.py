@@ -11,7 +11,7 @@ from rest_framework.response import Response
 from apps.core.errors import BusinessRuleError, NotFoundError
 from apps.core.permissions import IsAdminOrOperator
 from apps.engine import control
-from apps.engine.models import ReconcileResult, ReconcileRun
+from apps.engine.models import Alert, ReconcileResult, ReconcileRun
 
 
 class RunSerializer(serializers.ModelSerializer):
@@ -194,3 +194,83 @@ def _model_full(obj) -> dict:
     # model_to_dict 仅为兼容保留引用
     _ = model_to_dict
     return data
+
+
+# ---------- 工作台与告警（T13） ----------
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@extend_schema(
+    responses={
+        200: inline_serializer(
+            "DashboardOverview",
+            fields={
+                "reconcile_date": serializers.DateField(),
+                "runs": serializers.ListField(child=serializers.JSONField()),
+                "pending_disputes": serializers.IntegerField(),
+                "alerts_unread": serializers.IntegerField(),
+                "failed_runs": serializers.ListField(child=serializers.JSONField()),
+            },
+        )
+    },
+    summary="工作台总览（单查询聚合）",
+)
+def dashboard_overview_view(request):
+    from django.db.models import Count, Q
+
+    from apps.disputes.models import Dispute
+
+    reconcile_date = control.default_reconcile_date()
+    runs = (
+        ReconcileRun.objects.filter(reconcile_date=reconcile_date)
+        .select_related("project")
+        .order_by("project_id")
+    )
+    pending_disputes = Dispute.objects.filter(status=Dispute.Status.OPEN).count()
+    alerts_unread = Alert.objects.filter(read=False).count()
+    failed_runs = (
+        ReconcileRun.objects.filter(status=ReconcileRun.Status.FAILED)
+        .select_related("project")
+        .order_by("-id")[:10]
+    )
+    return Response(
+        {
+            "reconcile_date": reconcile_date.isoformat(),
+            "runs": RunSerializer(runs, many=True).data,
+            "pending_disputes": pending_disputes,
+            "alerts_unread": alerts_unread,
+            "failed_runs": RunSerializer(failed_runs, many=True).data,
+        }
+    )
+
+
+class AlertSerializer(serializers.ModelSerializer):
+    project_name = serializers.CharField(source="project.name", read_only=True)
+
+    class Meta:
+        model = Alert
+        fields = ["id", "project", "project_name", "reconcile_date", "kind", "message", "read", "created_at"]
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+@extend_schema(responses={200: AlertSerializer(many=True)}, summary="未读告警列表")
+def alerts_list_view(request):
+    alerts = Alert.objects.select_related("project").order_by("-id")[:50]
+    if request.query_params.get("all"):
+        pass
+    else:
+        alerts = alerts.filter(read=False)
+    return Response(AlertSerializer(alerts, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@extend_schema(responses={200: {"type": "object", "properties": {"ok": {"type": "boolean"}}}}, summary="标记告警已读（id 或全部）")
+def alerts_read_view(request):
+    alert_id = request.data.get("id")
+    qs = Alert.objects.all()
+    if alert_id:
+        qs = qs.filter(pk=alert_id)
+    updated = qs.filter(read=False).update(read=True)
+    return Response({"ok": True, "updated": updated})

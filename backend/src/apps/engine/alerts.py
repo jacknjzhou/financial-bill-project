@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 def send_alert(project, reconcile_date, kind: str, message: str) -> None:
     Alert.objects.create(project=project, reconcile_date=reconcile_date, kind=kind, message=message)
-    subject = f"[对账告警] {project.name} {reconcile_date} {kind}"
+    kind_label = {"failed": "对账失败", "dispute": "新差异"}.get(kind, kind)
+    subject = f"[对账告警] {project.name} {reconcile_date} {kind_label}"
     try:
         send_mail(
             subject=subject,

@@ -9,5 +9,8 @@ router.register("reconcile-results", views.ResultViewSet, basename="reconcile-re
 
 urlpatterns = [
     path("reconcile-projects/<int:project_id>/runs", views.trigger_run_view),
+    path("dashboard/overview", views.dashboard_overview_view),
+    path("alerts", views.alerts_list_view),
+    path("alerts/read", views.alerts_read_view),
     path("", include(router.urls)),
 ]

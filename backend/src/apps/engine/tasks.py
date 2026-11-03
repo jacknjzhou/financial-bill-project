@@ -42,7 +42,25 @@ def run_reconcile(run_id: int) -> str:
     run.save(update_fields=["status", "finished_at", *summary.keys(), "updated_at"])
 
     _materialize_disputes(run)
+    _alert_on_summary(project, run.reconcile_date, summary)
     return "success"
+
+
+def _alert_on_summary(project, reconcile_date, summary: dict) -> bool:
+    """run 成功但有差异 → dispute 告警（站内 + 邮件摘要）。全平不告警。"""
+    diff_total = summary.get("one_a_cnt", 0) + summary.get("one_b_cnt", 0) + summary.get("wrong_cnt", 0)
+    if diff_total <= 0:
+        return False
+    from apps.engine.alerts import send_alert
+
+    send_alert(
+        project,
+        reconcile_date,
+        "dispute",
+        f"{project.name} {reconcile_date} 产生差异 {diff_total} 笔"
+        f"（单边A {summary.get('one_a_cnt', 0)} / 单边B {summary.get('one_b_cnt', 0)} / 错账 {summary.get('wrong_cnt', 0)}），请及时处理",
+    )
+    return True
 
 
 def _materialize_disputes(run) -> None:
