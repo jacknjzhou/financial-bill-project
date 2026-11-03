@@ -64,7 +64,7 @@ docker compose exec web python manage.py migrate --noinput
 docker compose logs -f --tail=100 web worker beat   # 看日志
 docker compose up -d --scale worker=4               # 扩 worker
 docker compose exec postgres pg_dump -U recon recon > backup_$(date +%F).sql
-tar czf files_$(date +%F).tgz /data/files           # 账单文件备份（与 DB 同频率）
+docker compose exec -T web tar czf - /data/files > files_$(date +%F).tgz  # 账单文件备份（与 DB 同频率）
 ```
 
 - **升级**：拉新 tag → `docker compose up -d --build` → migrate（数据卷保留）
