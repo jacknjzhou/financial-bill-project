@@ -33,6 +33,9 @@ services:
     environment:
       DB_HOST: postgres # 容器内覆盖 .env 的 localhost
       REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files # web/worker/beat 共享，worker 才能读到上传文件
+    volumes:
+      - filedata:/data
     ports:
       - "8000:8000" # 仅 internal 网络 + frontend 反代；本机调试可直连
     depends_on:
@@ -53,6 +56,9 @@ services:
     environment:
       DB_HOST: postgres
       REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files
+    volumes:
+      - filedata:/data
     command: celery -A financial_bill worker -c 2 --loglevel=info
     depends_on:
       postgres:
@@ -68,6 +74,9 @@ services:
     environment:
       DB_HOST: postgres
       REDIS_URL: redis://redis:6379/0
+      FILES_ROOT: /data/files
+    volumes:
+      - filedata:/data
     command: celery -A financial_bill beat --loglevel=info
     depends_on:
       postgres:
@@ -84,3 +93,4 @@ services:
 
 volumes:
   pgdata:
+  filedata:

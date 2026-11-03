@@ -6,6 +6,7 @@ import { projectApi } from "../../api/rules";
 import type { ReconcileProject } from "../../api/rules";
 import { disputeApi } from "../../api/disputes";
 import type { DisputeRow, HandleLogRow } from "../../api/disputes";
+import { http } from "../../api/client";
 
 const TYPE_LABEL: Record<string, string> = { one_a: "单边A", one_b: "单边B", wrong: "错账" };
 const TYPE_TAG: Record<string, string> = { one_a: "warning", one_b: "warning", wrong: "danger" };
@@ -44,7 +45,6 @@ onMounted(async () => {
 });
 
 async function httpGetDisputeTypes() {
-  const { default: http } = await import("../../api/client");
   const r = await http.get<{ items: Array<{ id: number; name: string; description: string }> }>("/dispute-types", { params: { page: 1, page_size: 100 } });
   return r.data.items.filter((x) => x.name); // 仅交易组（一期差异均为交易型）
 }

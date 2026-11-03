@@ -52,7 +52,8 @@ async function doUpload(options: UploadRequestOptions) {
     return Promise.reject(new Error("no task"));
   }
   try {
-    const item = await filesApi.upload(selectedTask.value, options.file);
+    // 默认覆盖重传：当日同名文件重复上传视为替换（已被对账引用的文件由后端 409 拦截）
+    const item = await filesApi.upload(selectedTask.value, options.file, true);
     ElMessage.success(`已上传：${STATUS_LABEL[item.status] ?? item.status}`);
     table.value?.reload();
   } catch (e) {

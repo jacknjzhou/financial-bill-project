@@ -25,6 +25,7 @@ const table = ref<InstanceType<typeof PagTable>>();
 const projects = ref<ReconcileProject[]>([]);
 const selectedProject = ref<number | undefined>();
 const fStatus = ref("");
+const runDate = ref(yesterday());
 let pollTimer: number | undefined;
 
 onMounted(async () => {
@@ -43,11 +44,12 @@ function yesterday(): string {
 }
 
 async function trigger(row: ReconcileProject, rerun: boolean) {
+  const date = runDate.value || yesterday();
   try {
     await ElMessageBox.confirm(
       rerun
-        ? `确认重对「${row.name}」${yesterday()}？将清除该日已有结果后重新计算。`
-        : `确认执行「${row.name}」${yesterday()} 的对账？`,
+        ? `确认重对「${row.name}」${date}？将清除该日已有结果后重新计算。`
+        : `确认执行「${row.name}」${date} 的对账？`,
       "提示",
       { type: "warning" },
     );
@@ -55,7 +57,7 @@ async function trigger(row: ReconcileProject, rerun: boolean) {
     return;
   }
   try {
-    await runApi.trigger(row.id!, { rerun });
+    await runApi.trigger(row.id!, { rerun, date });
     ElMessage.success("已触发，执行中…");
     table.value?.reload();
   } catch (e) {
@@ -79,6 +81,7 @@ function showError(row: ReconcileRun) {
 <template>
   <div>
     <div class="toolbar">
+      <el-date-picker v-model="runDate" type="date" placeholder="对账日期" value-format="YYYY-MM-DD" class="w160" />
       <el-select v-model="selectedProject" placeholder="全部项目" clearable class="w240" @change="table?.reload()">
         <el-option v-for="p in showProjects()" :key="p.id" :label="p.name" :value="p.id!" />
       </el-select>
